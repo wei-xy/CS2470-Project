@@ -1,13 +1,13 @@
 import numpy as np
-import matplotlib.pyplot as plt
 
-# global parameters
+# global parameters --------------------------------------------------------- #
 num_graphs = 1000     # number of samples to be generated
 N = 100               # number of nodes
 radius = 1            # <-- radius of the various circle
 area_sphere = 4 * np.pi * radius**2
 point_density = N/area_sphere  # density of points
 threshold_dist = 0.4  # <-- nodes within this distance will be connected
+# --------------------------------------------------------------------------- #
 
 
 """ spherical graphs """
@@ -41,6 +41,7 @@ def sphere_generator():
 
 
 """ planar graphs """
+
 def plane_generator(pt_density):
     radius = (N / (np.pi * pt_density)) ** 0.5  # <-- convert pt_density into radius
 
@@ -106,8 +107,8 @@ def hyperbolic_generator():
 
         data_hyperbolic.append(Adj_Matrix)
 
-# define the sphere labels  (will use sphere=0, plane=1, hyperbolic=2, for one-hot encoding)
-hyperbolic_labels = [2] * num_graphs
+
+""" generates all graphs """
 
 def generate_all_graphs():
     sphere_graphs = sphere_generator()
