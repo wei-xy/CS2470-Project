@@ -124,3 +124,5 @@ def generate_all_graphs():
     all_labels = sphere_labels + planar_labels + hyperbolic_labels
 
     return (all_graphs, all_labels)
+
+
