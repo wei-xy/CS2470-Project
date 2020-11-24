@@ -1,13 +1,13 @@
 import numpy as np
 
-# global parameters --------------------------------------------------------- #
-num_graphs = 1000     # number of samples to be generated
-N = 100               # number of nodes
-radius = 1            # <-- radius of the various circle
-area_sphere = 4 * np.pi * radius**2
+# global parameters ------------------------------------------------------------ #
+num_graphs = 1000     # number of samples to be generated (per geometry)
+N = 100               # number of nodes (per graph)
+radius = 1            # radius of the various circles in each geometry
+area_sphere = 4 * np.pi * radius**2  # area of a sphere to generate point_density
 point_density = N/area_sphere  # density of points
-threshold_dist = 0.4  # <-- nodes within this distance will be connected
-# --------------------------------------------------------------------------- #
+threshold_dist = 0.4  # nodes within this distance will be connected
+# ------------------------------------------------------------------------------ #
 
 
 """ spherical graphs """
@@ -124,5 +124,7 @@ def generate_all_graphs():
     all_labels = sphere_labels + planar_labels + hyperbolic_labels
 
     return (all_graphs, all_labels)
+
+
 
 
