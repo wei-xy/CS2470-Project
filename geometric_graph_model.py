@@ -3,10 +3,19 @@
 # import os
 # import math
 from graph_generator import generate_all_graphs
-from convolution import conv2d
 import tensorflow as tf
 import numpy as np
 import random
+import pickle
+
+# for loading/saving data (with pickles!)
+def save_obj(obj, name):
+    with open(name + '.pkl', 'wb') as f:
+        pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
+
+def load_obj(name):
+    with open(name + '.pkl', 'rb') as f:
+        return pickle.load(f)
 
 # the neural network model
 class Model(tf.keras.Model):
