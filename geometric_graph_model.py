@@ -2,7 +2,7 @@
 # from matplotlib import pyplot as plt
 # import os
 # import math
-from graph generator import generate_all_graphs
+from graph_generator import generate_all_graphs
 from convolution import conv2d
 import tensorflow as tf
 import numpy as np
