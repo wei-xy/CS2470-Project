@@ -107,6 +107,8 @@ def hyperbolic_generator():
 
         data_hyperbolic.append(Adj_Matrix)
 
+    return data_hyperbolic
+
 
 """ generates all graphs """
 
