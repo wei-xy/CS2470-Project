@@ -1,15 +1,14 @@
-from __future__ import absolute_import
-from matplotlib import pyplot as plt
-from preprocess import get_data
+# from __future__ import absolute_import
+# from matplotlib import pyplot as plt
+# import os
+# import math
+from graph generator import generate_all_graphs
 from convolution import conv2d
-
-import os
 import tensorflow as tf
 import numpy as np
 import random
-import math
 
-
+# the neural network model
 class Model(tf.keras.Model):
     def __init__(self):
         """
@@ -20,9 +19,9 @@ class Model(tf.keras.Model):
         """
         super(Model, self).__init__()
 
-        self.batch_size = 20
-        self.num_classes = 3
-        self.loss_list = []  # Append losses to this list in training so you can visualize loss vs time in main
+        self.batch_size = 20   # number of graphs per batch
+        self.num_classes = 3   # one class for each geometry
+        self.loss_list = []    # Append losses to this list in training so you can visualize loss vs time in main
 
         # two hidden (dense) layer sizes
         self.h1 = 200
@@ -44,7 +43,7 @@ class Model(tf.keras.Model):
         self.dense2 = tf.keras.layers.Dense(units=self.h2, use_bias=True, activation='relu')
         self.dense3 = tf.keras.layers.Dense(units=self.num_classes, use_bias=True, activation='relu')
 
-    def call(self, inputs, is_testing=True):
+    def call(self, inputs):
         """
         Runs a forward pass on an input batch of images.
         :param inputs: adjacency matrices, shape of (num_inputs, 100, 100, 1)
@@ -145,14 +144,14 @@ def train(model, train_inputs, train_labels):
 
     input_sz = train_inputs.shape[0]
     for b in range(0, input_sz, model.batch_size):
-        images_in_batch = train_inputs[b: b + model.batch_size]
+        graphs_in_batch = train_inputs[b: b + model.batch_size]
         labels_in_batch = train_labels[b: b + model.batch_size]
 
         # randomly flip images in batch
-        images_in_batch = tf.image.random_flip_left_right(images_in_batch)
+        images_in_batch = tf.image.random_flip_left_right(graphs_in_batch)
 
         with tf.GradientTape() as tape:
-            logits = model.call(images_in_batch)  # calls the model on a batch
+            logits = model.call(graphs_in_batch)  # calls the model on a batch
             loss = model.loss(logits, labels_in_batch)
             # keeping track of training accuracy:
             if b // model.batch_size % 5 == 0:
@@ -164,18 +163,9 @@ def train(model, train_inputs, train_labels):
         optimizer.apply_gradients(zip(gradients, model.trainable_variables))
 
 
-def get_data(file_location):
-    """
-    geta_data will unpickle the data which will have been pickled as a tuple (graphs, labels)
-    """
-    with open(file_location, 'rb') as fo:
-        data = pickle.load(fo, encoding='bytes')
-    return data
-
 def test(model, test_inputs, test_labels):
     """
-    Tests the model on the test inputs and labels. You should NOT randomly
-    flip images or do any extra preprocessing.
+    Tests the model on the test inputs and labels.
     :param test_inputs: test data (all images to be tested),
     shape (num_inputs, width, height, num_channels)
     :param test_labels: test labels (all corresponding labels),
@@ -212,26 +202,47 @@ def main():
     '''
      - reads in graph data (1000 graphs of each type)
          - divides data into 80% train and 20% test
+     - turns labels into one-hot vectors
      - trains the network model
      - tests the model
      - returns the accuracy
     '''
 
-    train_graphs, train_labels = get_data('geom_graphs')
+    # generating the graphs
+    all_graphs, all_labels = generate_all_graphs()
+    num_graphs = len(all_graphs)
+    train_sz = int(num_graphs * 0.8)
 
+    # turning labels into one-hot vectors
+    all_labels = tf.one_hot(all_labels, depth=3)
+
+    # shuffling the data
+    shuffled_indices = tf.random.shuffle(np.arange(num_graphs))
+    shuffled_graphs = tf.gather(all_graphs, shuffled_indices)
+    shuffled_labels = tf.gather(all_labels, shuffled_indices)
+
+    # dividing the data into train/test sets
+    train_graphs = shuffled_graphs[:train_sz]
+    train_labels =  shuffled_labels[:train_sz]
+    test_graphs = shuffled_graphs[train_sz:]
+    test_labels = shuffled_labels[train_sz:]
+
+    # instantiating the model
     model = Model()
 
-    # trains the model for 10 epochs
-    for epoch in range(10):
+    # trains the model for some number of epochs
+    for epoch in range(1):
+
         print('Epoch number', epoch)
 
-        shuffled_indices = tf.random.shuffle(np.arange(train_inputs.shape[0]))
-        shuffled_inputs = tf.gather(train_inputs, shuffled_indices)
-        shuffled_labels = tf.gather(train_labels, shuffled_indices)
+        # shuffle train data each epoch:
+        # shuffled_indices = tf.random.shuffle(np.arange(train_inputs.shape[0]))
+        # shuffled_inputs = tf.gather(train_inputs, shuffled_indices)
+        # shuffled_labels = tf.gather(train_labels, shuffled_indices)
 
-        train(model, train_inputs=shuffled_inputs, train_labels=shuffled_labels)
+        train(model, train_inputs=train_graphs, train_labels=train_labels)
 
-    test(model, test_inputs, test_labels)
+    test(model, test_graphs, test_graphs)
 
 
 if __name__ == '__main__':
