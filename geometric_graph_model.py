@@ -1,7 +1,3 @@
-# from __future__ import absolute_import
-# from matplotlib import pyplot as plt
-# import os
-# import math
 from graph_generator import generate_all_graphs
 import tensorflow as tf
 import numpy as np
@@ -20,12 +16,6 @@ def load_obj(name):
 # the neural network model
 class Model(tf.keras.Model):
     def __init__(self):
-        """
-        This model class will contain the architecture for your CNN that
-        classifies images. Do not modify the constructor, as doing so
-        will break the autograder. We have left in variables in the constructor
-        for you to fill out, but you are welcome to change them if you'd like.
-        """
         super(Model, self).__init__()
 
         self.batch_size = 20   # number of graphs per batch
@@ -54,7 +44,7 @@ class Model(tf.keras.Model):
 
     def call(self, inputs):
         """
-        Runs a forward pass on an input batch of images.
+        Runs a forward pass on an input batch of graphs
         :param inputs: adjacency matrices, shape of (num_inputs, 100, 100, 1)
         :param is_testing: a boolean that should be set to True only when you're doing Part 2 of the assignment and this function is being called during testing
         :return: logits - a matrix of shape (num_inputs, num_classes)
@@ -62,6 +52,9 @@ class Model(tf.keras.Model):
 
         # need to expand dims to add a "channel" of size 1
         inputs = tf.expand_dims(inputs, axis=-1)  # to be consistent with a channel size of 1 (for images)
+        inputs = tf.cast(inputs, tf.float32)  # conv2d prefers float32
+
+        # print(np.shape(inputs))
 
         # layer 1
         layer1Output = tf.nn.conv2d(inputs, self.filter1, strides=[1, 1, 1, 1], padding='SAME')
@@ -126,12 +119,56 @@ class Model(tf.keras.Model):
         containing the result of multiple convolution and feed forward layers
         :param labels: matrix of size (num_labels, self.num_classes) containing the answers, during training, this will be (batch_size, self.num_classes)
 
-        NOTE: DO NOT EDIT
-
         :return: the accuracy of the model as a Tensor
         """
+        # sphere_label = tf.one_hot(0, depth=3)
+        # plane_label = tf.one_hot(1, depth=3)
+        # hyp_label = tf.one_hot(2, depth=3)
+        #
+        # num_labels = len(labels)
+        #
+        # sIndices = [i for i in range(num_labels) if all(labels[i] == sphere_label)]
+        # pIndices = [i for i in range(num_labels) if all(labels[i] == plane_label)]
+        # hIndices = [i for i in range(num_labels) if all(labels[i] == hyp_label)]
+        #
+        # if len(sIndices) > 0:
+        #     sLogits = [logits[i] for i in sIndices]
+        #     sLabels = [labels[i] for i in sIndices]
+        #     sPredictions = tf.equal(tf.argmax(sLogits, 1), tf.argmax(sLabels, 1))
+        #     sAcc = tf.reduce_mean(tf.cast(sPredictions, tf.float32))
+        #     print(sAcc.numpy())
+        #     print('')
+        # else:
+        #     sAcc = tf.constant(0)
+        #
+        # if len(pIndices) > 0:
+        #     pLogits = [logits[i] for i in pIndices]
+        #     pLabels = [labels[i] for i in pIndices]
+        #     pPredictions = tf.equal(tf.argmax(pLogits, 1), tf.argmax(pLabels, 1))
+        #     pAcc = tf.reduce_mean(tf.cast(pPredictions, tf.float32))
+        #     print(pAcc.numpy())
+        #     print('')
+        # else:
+        #     pAcc = tf.constant(0)
+        #     print('pIndices had zero len')
+        #
+        # if len(hIndices)>0:
+        #     hLogits = [logits[i] for i in hIndices]
+        #     hLabels = [labels[i] for i in hIndices]
+        #     hPredictions = tf.equal(tf.argmax(hLogits, 1), tf.argmax(hLabels, 1))
+        #     hAcc = tf.reduce_mean(tf.cast(hPredictions, tf.float32))
+        #     print(hAcc.numpy())
+        #     print('')
+        # else:
+        #     hAcc = tf.constant(0)
+        #     print('hIndices had zero len')
+        #
+        # print('-----------------------')
+
         correct_predictions = tf.equal(tf.argmax(logits, 1), tf.argmax(labels, 1))
+
         return tf.reduce_mean(tf.cast(correct_predictions, tf.float32))
+
 
 
 def train(model, train_inputs, train_labels):
@@ -151,20 +188,22 @@ def train(model, train_inputs, train_labels):
     # defines a global instance of the optimizer, to be used in train
     optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
 
+    # accuracies = []
+
     input_sz = train_inputs.shape[0]
     for b in range(0, input_sz, model.batch_size):
         graphs_in_batch = train_inputs[b: b + model.batch_size]
         labels_in_batch = train_labels[b: b + model.batch_size]
 
-        # randomly flip images in batch
-        images_in_batch = tf.image.random_flip_left_right(graphs_in_batch)
+        # randomly flip permute indices in graph
+        # try to implement this?
 
         with tf.GradientTape() as tape:
             logits = model.call(graphs_in_batch)  # calls the model on a batch
             loss = model.loss(logits, labels_in_batch)
             # keeping track of training accuracy:
             if b // model.batch_size % 5 == 0:
-                train_acc = model.accuracy(model(images_in_batch), labels_in_batch)
+                train_acc = model.accuracy(logits, labels_in_batch)
                 print("Accuracy on training set after {} training steps: {}".format(b, train_acc))
 
         # this section taken from the lab
@@ -175,7 +214,7 @@ def train(model, train_inputs, train_labels):
 def test(model, test_inputs, test_labels):
     """
     Tests the model on the test inputs and labels.
-    :param test_inputs: test data (all images to be tested),
+    :param test_inputs: test data (all graphs to be tested),
     shape (num_inputs, width, height, num_channels)
     :param test_labels: test labels (all corresponding labels),
     shape (num_labels, num_classes)
@@ -187,24 +226,6 @@ def test(model, test_inputs, test_labels):
     accuracy = model.accuracy(logits, test_labels)
 
     print('model accuracy is', accuracy)
-
-
-def visualize_loss(losses):
-    """
-    Uses Matplotlib to visualize the losses of our model.
-    :param losses: list of loss data stored from train. Can use the model's loss_list
-    field
-
-    NOTE: DO NOT EDIT
-
-    :return: doesn't return anything, a plot should pop-up
-    """
-    x = [i for i in range(len(losses))]
-    plt.plot(x, losses)
-    plt.title('Loss per batch')
-    plt.xlabel('Batch')
-    plt.ylabel('Loss')
-    plt.show()
 
 
 def main():
@@ -225,33 +246,31 @@ def main():
     # turning labels into one-hot vectors
     all_labels = tf.one_hot(all_labels, depth=3)
 
-    # shuffling the data
-    shuffled_indices = tf.random.shuffle(np.arange(num_graphs))
-    shuffled_graphs = tf.gather(all_graphs, shuffled_indices)
-    shuffled_labels = tf.gather(all_labels, shuffled_indices)
-
-    # dividing the data into train/test sets
-    train_graphs = shuffled_graphs[:train_sz]
-    train_labels =  shuffled_labels[:train_sz]
-    test_graphs = shuffled_graphs[train_sz:]
-    test_labels = shuffled_labels[train_sz:]
-
     # instantiating the model
     model = Model()
 
     # trains the model for some number of epochs
-    for epoch in range(1):
+    for epoch in range(15):
+
+        # shuffling the data
+        shuffled_indices = tf.random.shuffle(np.arange(num_graphs))
+        shuffled_graphs = tf.gather(all_graphs, shuffled_indices)
+        shuffled_labels = tf.gather(all_labels, shuffled_indices)
+
+        # dividing the data into train/test sets
+        train_graphs = shuffled_graphs[:train_sz]
+        train_labels = shuffled_labels[:train_sz]
+        test_graphs = shuffled_graphs[train_sz:]
+        test_labels = shuffled_labels[train_sz:]
 
         print('Epoch number', epoch)
 
-        # shuffle train data each epoch:
-        # shuffled_indices = tf.random.shuffle(np.arange(train_inputs.shape[0]))
-        # shuffled_inputs = tf.gather(train_inputs, shuffled_indices)
-        # shuffled_labels = tf.gather(train_labels, shuffled_indices)
-
         train(model, train_inputs=train_graphs, train_labels=train_labels)
 
+        print('')
+
     test(model, test_graphs, test_labels)
+
 
 
 if __name__ == '__main__':
